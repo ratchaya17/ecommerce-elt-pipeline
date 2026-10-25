@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Local database files
+*.duckdb
+*.duckdb.tmp
+*.db
