@@ -1,35 +1,37 @@
-# 🛒 E-Commerce ELT Pipeline & Dimensional Data Warehouse
+# E-Commerce ELT Pipeline & Data Warehouse
 
-An end-to-end analytical data engineering pipeline built using **Python**, **DuckDB**, and **Kimball Dimensional Modeling (Star Schema)**. Demonstrates raw data ingestion, schema modeling, advanced analytical SQL (Window functions, CTEs, offsets), and exporting marts to columnar **Parquet** format.
+A lightweight, end-to-end ELT data pipeline built with Python, DuckDB, and SQL. 
 
----
-
-## 🏗️ Architecture & Pipeline Flow
-
-```
-   [ Raw CSV Sources ]
-   (Customers, Products, Orders)
-            │
-            ▼  (Python / DuckDB Auto Ingestion)
-   [ Staging Layer (stg_) ]
-   (Data Type Cleaning & Casting)
-            │
-            ▼  (Kimball Dimensional Modeling)
-   [ Star Schema Data Warehouse ]
-   ├── dim_customers (Surrogate key, demographics, cohort)
-   ├── dim_products  (Categorization, price brackets)
-   ├── dim_date      (365-day calendar dimension)
-   └── fact_orders   (Central transactional facts & metrics)
-            │
-     ┌──────┴──────────────────────────┐
-     ▼                                 ▼
-[ Advanced Analytics Mart ]     [ Columnar Parquet Export ]
-(CTEs, RANK, LEAD, LAG)         (Production-ready Storage)
-```
+The project ingests simulated e-commerce data (customers, products, and order transactions), models it into a Kimball Star Schema with fact and dimension tables, and runs analytical SQL queries to calculate business metrics like customer rankings, month-over-month growth, and repeat purchase frequency. Modeled tables are exported to columnar Parquet files.
 
 ---
 
-## 📊 Data Modeling (Star Schema)
+## Architecture
+
+The pipeline follows a standard ELT workflow:
+
+```
+[Raw CSVs] 
+    │
+    ▼ (DuckDB Ingestion)
+[Staging Tables] ──> Data type casting and string trimming
+    │
+    ▼ (SQL Transformations)
+[Star Schema Warehouse]
+    ├── dim_customers (Customer profiles and signup cohorts)
+    ├── dim_products  (Product catalog and price tiers)
+    ├── dim_date      (Generated calendar dimension)
+    └── fact_orders   (Order transactions with foreign keys)
+    │
+    ├─► [Analytical SQL Queries] (CTEs, Window Functions, LEAD/LAG)
+    └─► [Parquet Export] (Columnar storage in data/mart/)
+```
+
+---
+
+## Data Model (Star Schema)
+
+The warehouse uses dimensional modeling to optimize analytical queries:
 
 ```mermaid
 erDiagram
@@ -84,52 +86,66 @@ erDiagram
 
 ---
 
-## 🛠️ Tech Stack & Skills Demonstrated
+## Tech Stack
 
-* **Language:** Python 3.13 (Pipeline automation & synthetic ingestion engine)
-* **Analytical Database:** DuckDB (In-process OLAP database engine)
-* **Storage Formats:** CSV (Raw Landing), Parquet (Columnar Gold Storage)
-* **SQL Techniques:**
-  * **Common Table Expressions (`WITH ... AS`):** Modular, readable pipeline steps.
-  * **Window Ranking (`DENSE_RANK() OVER (PARTITION BY ...)`):** City-wise customer spending rankings.
-  * **Offset Window Functions (`LAG()` / `LEAD()`):** Month-over-Month (MoM) revenue growth & customer purchase interval calculation.
-  * **Cumulative Running Aggregations:** Tracking cumulative company revenue throughout the year.
+* **Language:** Python 3.13
+* **Database Engine:** DuckDB (in-process analytical OLAP engine)
+* **Data Formats:** CSV (raw sources), Parquet (gold layer storage)
+* **SQL Focus:** Common Table Expressions (CTEs), `DENSE_RANK()`, `LEAD()`, `LAG()`, and cumulative window aggregations
 
 ---
 
-## 🚀 How to Run the Pipeline
+## Project Structure
 
-### 1. Prerequisites
-Ensure Python is installed, then install DuckDB:
+```
+ecommerce_elt_pipeline/
+├── data/
+│   ├── raw/                 # Generated raw CSV datasets
+│   │   ├── raw_customers.csv
+│   │   ├── raw_products.csv
+│   │   └── raw_orders.csv
+│   ├── mart/                # Exported Parquet files
+│   └── generate_raw_data.py # Data generator script
+├── sql/
+│   ├── 01_staging.sql       # Source ingestion & type casting
+│   ├── 02_dimensional_model.sql # Star schema creation
+│   └── 03_analytics_queries.sql # Analytical SQL queries
+├── run_pipeline.py          # Master runner script
+├── .gitignore
+└── README.md
+```
+
+---
+
+## How to Run
+
+### 1. Install dependencies
 ```bash
 pip install duckdb
 ```
 
-### 2. Generate Raw Data (Optional - files already included)
+### 2. (Optional) Re-generate raw datasets
 ```bash
 python data/generate_raw_data.py
 ```
 
-### 3. Run the Entire Pipeline & Analytics Engine
+### 3. Run the complete pipeline
 ```bash
 python run_pipeline.py
 ```
 
----
-
-## 📈 Key Business Insights Generated
-
-1. **Top Spenders by City:** Identified highest value customers in each metropolitan hub using `DENSE_RANK()`.
-2. **MoM Revenue Velocity:** Monitored seasonal expansion and contraction using `LAG()` across 2024 order batches.
-3. **Repeat Purchase Velocity:** Calculated average days elapsed between repeat orders per customer using `LEAD()`.
-4. **Columnar Export:** Automatically exported transformed fact and dimension tables into snappy Parquet format (`data/mart/*.parquet`).
+This single command will:
+1. Initialize the DuckDB database (`ecommerce_warehouse.duckdb`).
+2. Run `01_staging.sql` to clean and load raw CSVs.
+3. Run `02_dimensional_model.sql` to build the Star Schema tables.
+4. Execute analytical queries and display results in the console.
+5. Export clean dimensional marts to `data/mart/*.parquet`.
 
 ---
 
-## 📄 Resume Bullet Points (Ready to Copy-Paste)
+## Key Analytics Queries Included
 
-* **E-Commerce ELT Pipeline & Dimensional Warehouse (Python, DuckDB, SQL, Parquet):**
-  * Engineered an end-to-end ELT pipeline ingesting multi-source transactional data into an in-process DuckDB analytical warehouse.
-  * Architected a **Kimball Star Schema** containing 3 dimension tables (`dim_customers`, `dim_products`, `dim_date`) and a centralized `fact_orders` table to streamline reporting.
-  * Authored advanced analytical SQL queries utilizing **CTEs**, **Window Functions** (`DENSE_RANK`, `PARTITION BY`), and offset functions (`LEAD`/`LAG`) to calculate Month-over-Month revenue velocity and customer retention intervals.
-  * Implemented an automated export pipeline dumping modeled data into compressed columnar **Parquet** files for optimized analytical consumption.
+* **Top Spenders by City:** Uses `DENSE_RANK() OVER (PARTITION BY city ORDER BY total_spent DESC)` to identify top customers per city while handling ties.
+* **Month-over-Month Revenue Growth:** Uses `LAG(revenue, 1)` to compare consecutive monthly revenues and compute percentage change.
+* **Customer Repeat Interval:** Uses `LEAD(order_date, 1)` to measure the average elapsed days between a customer's repeat purchases.
+* **Cumulative Revenue:** Tracks running sales volume across the year using `SUM() OVER (ORDER BY order_date)`.
